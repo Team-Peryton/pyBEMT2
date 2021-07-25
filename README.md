@@ -11,6 +11,11 @@ Other tools I have found:
 - https://sites.google.com/site/joaomorgado23/Home based on QBlade
 - https://www.mh-aerotools.de/airfoils/javaprop.htm 
 
+Propeller data:
+- https://m-selig.ae.illinois.edu/props/propDB.html
+- T motor website contains a lot of static testinf
+- https://www.apcprop.com/technical-information/performance-data/ contains simulation data - my initial findings have shown this to be pretty off, especially in power estimation
+
 Changes:
 - Propeller geometry input is now done through a python dataclass instead of through an input file. This enables programmatic batch analysis. 
 
