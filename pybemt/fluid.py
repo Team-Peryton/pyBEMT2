@@ -11,8 +11,8 @@ class Fluid:
     :param configparser.SafeConfigParser cfg: Configuration object
     """
 
-    def __init__(self, cfg):
-        self.rho = cfg.getfloat('fluid','rho')
-        self.mu = cfg.getfloat('fluid','mu')
+    def __init__(self, config):
+        self.rho = config.rho
+        self.mu = config.mu
 
 

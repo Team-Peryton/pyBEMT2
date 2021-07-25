@@ -12,6 +12,7 @@ from configparser import SafeConfigParser
 from math import radians, degrees, sqrt, pi
 from .fluid import Fluid
 from .rotor import Rotor
+from .config import Config
 
 
 class Solver: 
@@ -21,35 +22,23 @@ class Solver:
 
     :param string config_path: Path to config file
     """
-    def __init__(self, config_path):
+    def __init__(self, config:Config):
 
-        # Read configuration file
-        cfg = SafeConfigParser()
-        cfg.read(config_path)
         
         # Case
-        self.v_inf = cfg.getfloat('case', 'v_inf')
-        self.rpm = cfg.getfloat('case', 'rpm')
-        if cfg.has_option('case', 'twist'):
-            self.twist = cfg.getfloat('case', 'twist')
-        else:
-            self.twist = 0.0
-        if cfg.has_option('case', 'coaxial'):
-            self.coaxial = cfg.getboolean('case', 'coaxial')
-        else:
-            self.coaxial = False
+        self.v_inf = config.v_inf
+        self.rpm = config.rpm
+        self.coaxial = config.coaxial
+        self.twist = config.twist
         
 
-        # Rotor
-        if cfg.has_section('turbine'):
-            self.mode = 'turbine'
-            self.rotor = Rotor(cfg, 'turbine', self.mode)
-        else:
-            self.mode = 'rotor'
-            self.rotor = Rotor(cfg, 'rotor', self.mode)
+        if config.rotor: self.mode = 'rotor'
+        else: self.mode = 'turbine'
+        self.rotor = Rotor(config, 'rotor', self.mode)
+
 
         # Fluid
-        self.fluid = Fluid(cfg)
+        self.fluid = Fluid(config)
         
         # Output
         self.T = 0 # Thrust
@@ -58,13 +47,10 @@ class Solver:
         
         # Coaxial
         if self.coaxial:
-            self.rpm2 = cfg.getfloat('case','rpm2')
-            if cfg.has_option('case', 'twist2'):
-                self.twist2 = cfg.getfloat('case', 'twist2')
-            else:
-                self.twist2 = 0.0
-            self.rotor2 = Rotor(cfg, 'rotor2', self.mode)
-            self.zD = cfg.getfloat('case','dz')/self.rotor.diameter
+            self.rpm2 = config.rpm2
+            self.twist2 = config.twist2
+            self.rotor2 = Rotor(config, 'rotor2', self.mode)
+            self.zD = config.dz/self.rotor.diameter
             self.T2 = 0
             self.Q2 = 0
             self.P2 = 0
@@ -72,11 +58,14 @@ class Solver:
         # Solver
         self.solver = 'bisect'
         self.Cs = 0.625
-        if cfg.has_section('solver'):
-            self.solver = cfg.get('solver','solver')
-            if cfg.has_option('solver', 'Cs'):
-                self.Cs = cfg.getfloat('solver','Cs')
-       
+
+        # solver options removed since there are no examples with these
+        # if cfg.has_section('solver'):
+        #     self.solver = cfg.get('solver','solver')
+        #     if cfg.has_option('solver', 'Cs'):
+        #         self.Cs = cfg.getfloat('solver','Cs')
+    
+
     def rotor_coeffs(self, T, Q, P):
         """ 
         Dimensionless coefficients for a rotor. 
@@ -112,6 +101,7 @@ class Solver:
             eta = (CT/CP)*J
 
         return J, CT, CQ, CP, eta
+
 
     def turbine_coeffs(self, T, Q, P):
         """
@@ -175,7 +165,7 @@ class Solver:
                 if self.coaxial:
                     T,Q,P,sec_df,T2,Q2,P2,sec_df2 = self.run()
                     J,CT,CQ,CP,eta = self.rotor_coeffs(T, Q, P)
-                    J,CT2,CQ2,CP2,eta = self.rotor_coeffs(T2, Q2, P2)
+                    J,CT2,CQ2,CP2,eta2 = self.rotor_coeffs(T2, Q2, P2)
                     df.iloc[i] = [p, T, Q, P, T2, Q2, P2, J, CT, CQ, CP, eta, CT2, CP2, eta2]
                 else:
                     T,Q,P,sec_df = self.run()
@@ -186,6 +176,7 @@ class Solver:
         
         return df, sections
     
+
     def solve(self, rotor, twist, rpm, v_inflow, r_inflow):
         """
         Find inflow angle and calculate forces for a single rotor given rotational speed, inflow velocity and radius.
@@ -234,6 +225,7 @@ class Solver:
         P = Q*omega  
 
         return T, Q, P
+
 
     def slipstream(self):
         """
@@ -306,6 +298,7 @@ class Solver:
                 resid[i] = 1e30
         i = np.argmin(abs(resid))
         return phis[i]
+
 
     def optimize_pitch(self):
         """

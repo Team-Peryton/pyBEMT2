@@ -38,7 +38,8 @@ class Airfoil:
         self.Cl_func = None
         self.Cd_func = None
         self.zero_lift = 0.0
-        
+
+
     def _normalize_angle(self, alpha):
         """
         Ensure that the angle fulfils :math:`\\pi < \\alpha < \\pi`
@@ -50,6 +51,7 @@ class Airfoil:
 
         return atan2(sin(alpha), cos(alpha))
     
+
     def Cd(self, alpha): 
         """
         Provide drag coefficent for a given angle of attack.
@@ -61,6 +63,7 @@ class Airfoil:
         # NB! The stored data uses degrees for the angle
         return self.Cd_func(-self.zero_lift + degrees(self._normalize_angle(alpha)))
 
+
     def Cl(self, alpha): # NB! The stored data uses degrees for the angle
         """
         Provide drag coefficent for a given angle of attack.
@@ -70,6 +73,7 @@ class Airfoil:
         :rtype: float
         """
         return self.Cl_func(-self.zero_lift + degrees(self._normalize_angle(alpha)))
+
 
     def plot(self, color='k'):
         """

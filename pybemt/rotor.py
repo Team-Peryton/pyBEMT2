@@ -7,6 +7,7 @@ import pandas as pd
 from configparser import NoOptionError
 from math import radians, degrees, sqrt, cos, sin, atan2, atan, pi, acos, exp
 from .airfoil import load_airfoil
+from.config import Config
 
 class Rotor: 
     """
@@ -16,28 +17,31 @@ class Rotor:
     :param string name: Name of rotor
     :param string mode: Solver mode
     """
-    def __init__(self, cfg, name, mode):
-        self.n_blades = cfg.getint(name, 'nblades')
-        self.diameter = cfg.getfloat(name, 'diameter')
+    def __init__(self, config:Config, name, mode):
+        self.n_blades = config.n_blades
+        self.diameter = config.diameter
+        self.radius_hub = config.radius[0]
+        self.alpha = config.pitch
 
-        s = cfg.get(name, 'section').split()
-        c = cfg.get(name, 'chord').split()
-        r = cfg.get(name, 'radius').split()
-        self.n_sections = len(s)
-        try:
-            dr = cfg.get(name,'dr').split()
-        except NoOptionError:
-            dr = self.n_sections*[float(r[1]) - float(r[0])]
+        section = config.section
+        chord = config.chord
+        radius = config.radius
+
+        self.n_sections = len(section)
+
+        #delta_radius_list = [self.radius_hub] + radius   
+        #delta_radius = [j-1 for i,j in zip(delta_radius_list[:-1], delta_radius_list[1:])]
+        delta_radius = self.n_sections*[radius[1] - radius[0]]
+
+        assert len(delta_radius) == self.n_sections
         
-        self.alpha = [float(p) for p in cfg.get(name, 'pitch').split()]
         self.sections = []
-        for i in range(self.n_sections): 
-            sec = Section(load_airfoil(s[i]), float(r[i]), float(dr[i]), radians(self.alpha[i]), float(c[i]), self, mode)
+        for i in range(self.n_sections):
+            sec = Section(load_airfoil(section[i]), radius[i], delta_radius[i], radians(self.alpha[i]), chord[i], self, mode)
             self.sections.append(sec)
-        
-        self.radius_hub = cfg.getfloat(name,'radius_hub')
 
-        self.precalc(twist=0.0)
+        self.precalc(config.twist)
+
 
     def precalc(self, twist):
         """
@@ -109,7 +113,8 @@ class Section:
         self.Cd = 0.0
 
         self.precalc()
-        
+
+
     def precalc(self):
         """
         Calculation of properties before each solver run, to ensure all parameters are correct for parameter sweeps.
@@ -117,6 +122,7 @@ class Section:
         :return: None
         """
         self.sigma = self.rotor.n_blades*self.chord/(2*pi*self.radius)
+
 
     def tip_loss(self, phi):
         """
@@ -132,8 +138,8 @@ class Section:
         :return: Combined tip and hub loss factor
         :rtype: float
         """
-        def prandtl(dr, r, phi):
-            f = self.rotor.n_blades*dr/(2*r*(sin(phi)))
+        def prandtl(delta_radius, r, phi):
+            f = self.rotor.n_blades*delta_radius/(2*r*(sin(phi)))
             if (-f > 500): # exp can overflow for very large numbers
                 F = 1.0
             else:
@@ -161,7 +167,7 @@ class Section:
             C_T = C_l\\cos{\\phi} - CC_d\\sin{\\phi} \\\\
             C_Q = C_l\\sin{\\phi} + CC_d\\cos{\\phi} \\\\
 
-        where drag and lift coefficients come from
+        where delta_radiusag and lift coefficients come from
         airfoil tables.
 
         :param float phi: Inflow angle
@@ -181,6 +187,7 @@ class Section:
         
         return CT, CQ
     
+
     def induction_factors(self, phi):
         """
         Calculation of axial and tangential induction factors,
@@ -210,6 +217,7 @@ class Section:
         
         return a, ap
         
+    
     def func(self, phi, v_inf, omega):
         """
         Residual function used in root-finding functions to find the inflow angle for the current section.
@@ -234,7 +242,8 @@ class Section:
         self.ap = ap
         
         return resid
-    
+
+
     def forces(self, phi, v_inf, omega, fluid):
         """
         Calculation of axial and tangential forces (thrust and torque) on airfoil section. 
@@ -286,5 +295,3 @@ class Section:
                 
         return self.dT, self.dQ
         
-    
-
