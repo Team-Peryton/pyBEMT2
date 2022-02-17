@@ -10,6 +10,8 @@ Other tools I have found:
 - http://www.q-blade.org/ based on XFLR5
 - https://sites.google.com/site/joaomorgado23/Home based on QBlade
 - https://www.mh-aerotools.de/airfoils/javaprop.htm 
+- https://web.mit.edu/drela/Public/web/qprop/
+
 
 Propeller data:
 - https://m-selig.ae.illinois.edu/props/propDB.html
